@@ -3,6 +3,7 @@
 
 set -ex
 
+# No Windows installer for 3.6.12
 PYTHON_VERSION=3.6.8
 
 PYTHON_FOLDER="python3"
@@ -58,7 +59,7 @@ popd
 $PYTHON -m pip install -U pip
 
 # Install Poetry and things needed for pyinstaller
-$PYTHON -m pip install poetry==1.0.10
+$PYTHON -m pip install poetry
 
 # We also need to change the timestamps of all of the base library files
 lib_dir=~/.wine/drive_c/python3/Lib
@@ -88,5 +89,13 @@ unset PYTHONHASHSEED
 # Make the final compressed package
 pushd dist
 VERSION=`$POETRY run hwi --version | cut -d " " -f 2 | dos2unix`
-zip "hwi-${VERSION}-windows-amd64.zip" hwi.exe hwi-qt.exe
+target_zipfile="hwi-${VERSION}-windows-amd64.zip"
+zip $target_zipfile hwi.exe hwi-qt.exe
+
+# Copy the binaries to subdir for shasum
+target_dir="$target_zipfile.dir"
+mkdir $target_dir
+mv hwi.exe $target_dir
+mv hwi-qt.exe $target_dir
+
 popd

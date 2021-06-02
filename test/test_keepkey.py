@@ -11,15 +11,18 @@ import sys
 import time
 import unittest
 
-from hwilib.devices.trezorlib.transport import enumerate_devices
 from hwilib.devices.trezorlib.transport.udp import UdpTransport
-from hwilib.devices.trezorlib.debuglink import TrezorClientDebugLink, load_device_by_mnemonic, load_device_by_xprv
+from hwilib.devices.trezorlib.debuglink import TrezorClientDebugLink, load_device_by_mnemonic
 from hwilib.devices.trezorlib import device, messages
 from test_device import DeviceEmulator, DeviceTestCase, start_bitcoind, TestDeviceConnect, TestDisplayAddress, TestGetKeypool, TestGetDescriptors, TestSignMessage, TestSignTx
 
-from hwilib.cli import process_commands
-from hwilib.devices.keepkey import KeepkeyClient
-
+from hwilib._cli import process_commands
+from hwilib.devices.keepkey import (
+    KeepkeyClient,
+    KeepkeyDebugLinkState,
+    KeepkeyFeatures,
+    KeepkeyResetDevice,
+)
 from types import MethodType
 
 def get_pin(self, code=None):
@@ -43,7 +46,7 @@ class KeepkeyEmulator(DeviceEmulator):
         # Start the Keepkey emulator
         self.emulator_proc = subprocess.Popen(['./' + os.path.basename(self.emulator_path)], cwd=os.path.dirname(self.emulator_path), stdout=self.keepkey_log)
         # Wait for emulator to be up
-        # From https://github.com/trezor/trezor-mcu/blob/master/script/wait_for_emulator.py
+        # From https://github.com/trezor/trezor-firmware/blob/master/legacy/script/wait_for_emulator.py
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.connect(('127.0.0.1', 21324))
         sock.settimeout(0)
@@ -57,12 +60,13 @@ class KeepkeyEmulator(DeviceEmulator):
                 time.sleep(0.05)
 
         # Setup the emulator
-        for dev in enumerate_devices():
-            # Find the udp transport, that's the emulator
-            if isinstance(dev, UdpTransport):
-                wirelink = dev
-                break
+        wirelink = UdpTransport.enumerate()[0]
         client = TrezorClientDebugLink(wirelink)
+        client.vendors = ("keepkey.com")
+        client.minimum_versions = {"K1-14AM": (0, 0, 0)}
+        client.map_type_to_class_override[KeepkeyFeatures.MESSAGE_WIRE_TYPE] = KeepkeyFeatures
+        client.map_type_to_class_override[KeepkeyResetDevice.MESSAGE_WIRE_TYPE] = KeepkeyResetDevice
+        client.debug.map_type_to_class_override[KeepkeyDebugLinkState.MESSAGE_WIRE_TYPE] = KeepkeyDebugLinkState
         client.init_device()
         device.wipe(client)
         load_device_by_mnemonic(client=client, mnemonic='alcohol woman abuse must during monitor noble actual mixed trade anger aisle', pin='', passphrase_protection=False, label='test') # From Trezor device tests
@@ -137,12 +141,12 @@ class TestKeepkeyGetxpub(KeepkeyTestCase):
             vectors = json.load(f)
         for vec in vectors:
             with self.subTest(vector=vec):
-                # Setup with xprv
+                # Setup with mnemonic
                 device.wipe(self.client)
-                load_device_by_xprv(client=self.client, xprv=vec['xprv'], pin='', passphrase_protection=False, label='test', language='english')
+                load_device_by_mnemonic(client=self.client, mnemonic=vec['mnemonic'], pin='', passphrase_protection=False, label='test', language='english')
 
                 # Test getmasterxpub
-                gmxp_res = self.do_command(['-t', 'keepkey', '-d', 'udp:127.0.0.1:21324', 'getmasterxpub'])
+                gmxp_res = self.do_command(['-t', 'keepkey', '-d', 'udp:127.0.0.1:21324', 'getmasterxpub', "--addr-type", "legacy"])
                 self.assertEqual(gmxp_res['xpub'], vec['master_xpub'])
 
                 # Test the path derivs
@@ -182,7 +186,7 @@ class TestKeepkeyManCommands(KeepkeyTestCase):
         t_client.client.ui.get_pin = MethodType(get_pin, t_client.client.ui)
         t_client.client.ui.pin = '1234'
         result = t_client.setup_device()
-        self.assertTrue(result['success'])
+        self.assertTrue(result)
 
         # Make sure device is init, setup should fail
         result = self.do_command(self.dev_args + ['-i', 'setup'])
@@ -212,7 +216,7 @@ class TestKeepkeyManCommands(KeepkeyTestCase):
         # Set a PIN
         device.wipe(self.client)
         load_device_by_mnemonic(client=self.client, mnemonic='alcohol woman abuse must during monitor noble actual mixed trade anger aisle', pin='1234', passphrase_protection=False, label='test')
-        self.client.call(messages.ClearSession())
+        self.client.call(messages.LockDevice())
         result = self.do_command(self.dev_args + ['enumerate'])
         for dev in result:
             if dev['type'] == 'trezor' and dev['path'] == 'udp:127.0.0.1:21324':
@@ -226,7 +230,7 @@ class TestKeepkeyManCommands(KeepkeyTestCase):
         self.assertEqual(result['code'], -7)
 
         result = self.do_command(self.dev_args + ['sendpin', '00000'])
-        self.assertFalse(result['success'])
+        self.assertFalse(result["success"])
 
         # Make sure we get a needs pin message
         result = self.do_command(self.dev_args + ['getxpub', 'm/0h'])
@@ -234,7 +238,7 @@ class TestKeepkeyManCommands(KeepkeyTestCase):
         self.assertEqual(result['error'], 'Keepkey is locked. Unlock by using \'promptpin\' and then \'sendpin\'.')
 
         # Prompt pin
-        self.client.call(messages.ClearSession())
+        self.client.call(messages.LockDevice())
         result = self.do_command(self.dev_args + ['promptpin'])
         self.assertTrue(result['success'])
 
@@ -279,7 +283,7 @@ class TestKeepkeyManCommands(KeepkeyTestCase):
                 self.assertNotEqual(dev['fingerprint'], fpr)
 
         # Clearing the session and starting a new one with a new passphrase should change the passphrase
-        self.client.call(messages.ClearSession())
+        self.client.call(messages.LockDevice())
         result = self.do_command(self.dev_args + ['-p', 'pass3', 'enumerate'])
         for dev in result:
             if dev['type'] == 'keepkey' and dev['path'] == 'udp:127.0.0.1:21324':

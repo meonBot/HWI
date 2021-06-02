@@ -1,6 +1,7 @@
 # Bitcoin Hardware Wallet Interface
 
-[![Build Status](https://travis-ci.org/bitcoin-core/HWI.svg?branch=master)](https://travis-ci.org/bitcoin-core/HWI)
+[![Build Status](https://api.cirrus-ci.com/github/bitcoin-core/HWI.svg)](https://cirrus-ci.com/github/bitcoin-core/HWI)
+[![Documentation Status](https://readthedocs.org/projects/hwi/badge/?version=latest)](https://hwi.readthedocs.io/en/latest/?badge=latest)
 
 The Bitcoin Hardware Wallet Interface is a Python library and command line tool for interacting with hardware wallets.
 It provides a standard way for software to work with hardware wallets without needing to implement device specific drivers.
@@ -84,39 +85,17 @@ pass the `--help` parameter after the command name; for example:
 ./hwi.py getdescriptors --help
 ```
 
-## Device Support
+## Documentation
 
-The below table lists what devices and features are supported for each device.
+Documentation for HWI can be found on [readthedocs.io](https://hwi.readthedocs.io/).
 
-Please also see [docs](docs/) for additional information about each device.
+### Device Support
 
-| Feature \ Device | Ledger Nano X | Ledger Nano S | Trezor One | Trezor Model T | BitBox01 | BitBox02 | KeepKey | Coldcard |
-|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| Support Planned | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-| Implemented | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-| xpub retrieval | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-| Message Signing | Yes | Yes | Yes | Yes | Yes | N/A | Yes | Yes |
-| Device Setup | N/A | N/A | Yes | Yes | Yes | Yes | Yes | N/A |
-| Device Wipe | N/A | N/A | Yes | Yes | Yes | Yes | Yes | N/A |
-| Device Recovery | N/A | N/A | Yes | Yes | N/A | Yes | Yes | N/A |
-| Device Backup | N/A | N/A | N/A | N/A | Yes | Yes | N/A | Yes |
-| P2PKH Inputs | Yes | Yes | Yes | Yes | Yes | N/A | Yes | Yes |
-| P2SH-P2WPKH Inputs | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-| P2WPKH Inputs | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-| P2SH Multisig Inputs | Yes | Yes | Yes | Yes | Yes | N/A | Yes | Yes |
-| P2SH-P2WSH Multisig Inputs | Yes | Yes | Yes | Yes | Yes | N/A | Yes | Yes |
-| P2WSH Multisig Inputs | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-| Bare Multisig Inputs | Yes | Yes | N/A | N/A | Yes | N/A | N/A | N/A |
-| Arbitrary scriptPubKey Inputs | Yes | Yes | N/A | N/A | Yes | N/A | N/A | N/A |
-| Arbitrary redeemScript Inputs | Yes | Yes | N/A | N/A | Yes | N/A | N/A | N/A |
-| Arbitrary witnessScript Inputs | Yes | Yes | N/A | N/A | Yes | N/A | N/A | N/A |
-| Non-wallet inputs | Yes | Yes | Yes | Yes | Yes | N/A | Yes | Yes |
-| Mixed Segwit and Non-Segwit Inputs | N/A | N/A | Yes | Yes | Yes | Yes | Yes | Yes |
-| Display on device screen | Yes | Yes | Yes | Yes | N/A | Yes | Yes | Yes |
+For documentation on devices supported and how they are supported, please check the [device support page](https://hwi.readthedocs.io/en/latest/devices/index.html#support-matrix)
 
-## Using with Bitcoin Core
+### Using with Bitcoin Core
 
-See [Using Bitcoin Core with Hardware Wallets](docs/bitcoin-core-usage.md).
+See [Using Bitcoin Core with Hardware Wallets](https://hwi.readthedocs.io/en/latest/examples/bitcoin-core-usage.html).
 
 ## License
 
